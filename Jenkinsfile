@@ -16,7 +16,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/shivamsharma-tech/your-repo'
+                git branch: 'main', url: 'https://github.com/shivamsharma-tech/Docker-test'
             }
         }
 
