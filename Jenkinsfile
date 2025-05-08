@@ -4,7 +4,7 @@ pipeline {
     environment {
         EC2_USER = 'ubuntu'
         EC2_HOST = '51.20.98.107 '
-        EC2_DIR = '/myapp'
+        EC2_DIR = '/home/ubuntu/myapp'
         SSH_KEY = 'ubuntu' // Your Jenkins SSH credentials ID
         PORTS = "3000 4000 5000"
     }
