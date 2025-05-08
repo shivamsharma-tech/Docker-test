@@ -2,49 +2,60 @@ pipeline {
     agent any
 
     environment {
-        EC2_USER = 'ubuntu'
-        EC2_HOST = '51.20.98.107'
+        NODE_ENV = 'production'
+        EC2_USER = 'ubuntu' // EC2 username for SSH
+        EC2_HOST = '51.20.98.107' // Your EC2 instance IP address (update this)
         EC2_DIR = '/home/ubuntu/myapp'
-        SSH_KEY = 'ubuntu' // Your Jenkins SSH credentials ID
-        PORTS = "3000 4000 5000"
+         SSH_KEY = 'ubuntu' // Directory on EC2 where the app is deployed
+        KEY_CRED_ID = 'ubuntu' // Jenkins SSH credentials ID for private key
     }
 
     tools {
-        nodejs 'node 18' // Match your Jenkins NodeJS setup name
+        nodejs 'Node 18' // Ensure this matches the name of NodeJS in your Jenkins Tool configuration
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                 git(
-                    url: 'https://github.com/shivamsharma-tech/Docker-test',
-                    branch: 'main',
-                    credentialsId: 'git-hub' // 👈 Use the same credential ID used in checkout
-                )
+                // Clone the repository from GitHub
+                git branch: 'main', url: 'https://github.com/shivamsharma-tech/Docker-test' // Change to your repository URL
             }
         }
 
         stage('Install Dependencies') {
             steps {
+                // Install the project dependencies
                 sh 'npm install'
             }
         }
 
-        stage('Deploy to Multiple Ports') {
+        stage('Build (Optional)') {
+            when {
+                // Run the build stage only if the 'build' folder exists
+                expression { fileExists('build') }
+            }
             steps {
-                sshagent (credentials: ["ubuntu"]) {
+                // Run the build command if required
+                sh 'npm run build'
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(credentials: ["${KEY_CRED_ID}"]) {
                     script {
-                        for (port in env.PORTS.split()) {
-                            sh """
-                            echo 🚀 Deploying to port ${port}...
-                            scp -o StrictHostKeyChecking=no -r . ${EC2_USER}@${EC2_HOST}:${EC2_DIR}-${port}
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << EOF
-                                cd ${EC2_DIR}-${port}
-                                npm install
-                                PORT=${port} pm2 start app.js --name myapp-${port} || pm2 restart myapp-${port}
-EOF
-                            """
-                        }
+                        // Deploy to EC2: Use SCP to copy files, then SSH to manage the app
+                        sh """
+                        echo '🚀 Deploying to EC2 instance...'
+                        scp -o StrictHostKeyChecking=no app.js ${EC2_USER}@${EC2_HOST}:${EC2_DIR}
+
+                        # SSH into the EC2 instance and use pm2 to manage the app
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << EOF
+                            cd ${EC2_DIR}
+                            pm2 restart myapp || pm2 start app.js --name myapp
+                            sudo fuser -k 3000/tcp || true  # Kill any process running on port 3000
+                        EOF
+                        """
                     }
                 }
             }
@@ -53,9 +64,11 @@ EOF
 
     post {
         success {
-            echo '✅ Deployed to all ports successfully!'
+            // Display success message after deployment
+            echo '✅ Deployment succeeded!'
         }
         failure {
+            // Display failure message if something goes wrong
             echo '❌ Deployment failed!'
         }
     }
