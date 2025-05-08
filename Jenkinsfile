@@ -2,59 +2,56 @@ pipeline {
     agent any
 
     environment {
-        NODE_ENV = 'production'
-        EC2_USER = 'ubuntu' // EC2 username for SSH
-        EC2_HOST = '51.20.98.107' // Your EC2 instance IP address
-        EC2_DIR = '/home/ubuntu/myapp' // Directory on EC2 where the app is deployed
-        KEY_CRED_ID = 'ubuntu' // Jenkins SSH credentials ID for private key
-    }
-
-    tools {
-        nodejs 'Node 18' // Ensure this matches the name of NodeJS in your Jenkins Tool configuration
+        EC2_USER = 'ubuntu'
+        EC2_HOST = '51.20.98.107'  // Replace with your actual EC2 host
+        EC2_KEY = credentials('your-ssh-key-id')  // Ensure SSH key credentials are configured in Jenkins
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Checkout SCM') {
             steps {
-                // Clone the repository from GitHub
-                git branch: 'main', url: 'https://github.com/shivamsharma-tech/Docker-test' // Change to your repository URL
+                checkout scm
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                // Install the project dependencies
-                sh 'npm install'
-            }
-        }
-
-        stage('Build (Optional)') {
-            when {
-                // Run the build stage only if the 'build' folder exists
-                expression { fileExists('build') }
-            }
-            steps {
-                // Run the build command if required
-                sh 'npm run build'
+                script {
+                    // Install npm dependencies
+                    sh 'npm install'
+                }
             }
         }
 
         stage('Deploy to EC2') {
-            steps {
-                sshagent(credentials: ["${KEY_CRED_ID}"]) {
-                    script {
-                        // Deploy to EC2: Use SCP to copy files, then SSH to manage the app
-                        sh '''
-                        echo '🚀 Deploying to EC2 instance...'
-                        scp -o StrictHostKeyChecking=no app.js ${EC2_USER}@${EC2_HOST}:${EC2_DIR}
+            matrix {
+                axes {
+                    axis {
+                        name 'DEPLOY_ENV'
+                        values 'staging', 'production'  // Add more environments if necessary
+                    }
+                    axis {
+                        name 'PORT'
+                        values '3000', '8080'  // Define different ports for each environment
+                    }
+                }
+                stages {
+                    stage('Deploy to EC2 for ${DEPLOY_ENV} on port ${PORT}') {
+                        steps {
+                            script {
+                                echo "🚀 Deploying to EC2 environment: ${DEPLOY_ENV} on port ${PORT}"
 
-                        # SSH into the EC2 instance and use pm2 to manage the app
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} <<EOF
-                            cd ${EC2_DIR}
-                            pm2 restart myapp || pm2 start app.js --name myapp
-                            sudo fuser -k 3000/tcp || true  # Kill any process running on port 3000
-                        EOF
-                        '''
+                                // Deployment steps for SCP and SSH, including dynamic port handling
+                                sh """
+                                    scp -o StrictHostKeyChecking=no -i ${EC2_KEY} app.js ${EC2_USER}@${EC2_HOST}:/home/ubuntu/myapp
+                                    ssh -o StrictHostKeyChecking=no -i ${EC2_KEY} ${EC2_USER}@${EC2_HOST} <<EOF
+                                    echo "Deploying ${DEPLOY_ENV} environment on port ${PORT}"
+                                    cd /home/ubuntu/myapp
+                                    pm2 restart myapp || pm2 start app.js --name myapp --port ${PORT}
+                                    EOF
+                                """
+                            }
+                        }
                     }
                 }
             }
@@ -63,12 +60,12 @@ pipeline {
 
     post {
         success {
-            // Display success message after deployment
-            echo '✅ Deployment succeeded!'
+            echo 'Deployment completed successfully!'
         }
+
         failure {
-            // Display failure message if something goes wrong
-            echo '❌ Deployment failed!'
+            echo '❌ Deployment failed! Check the logs above for errors.'
+            // Additional failure notification (e.g., Slack, email, etc.)
         }
     }
 }
