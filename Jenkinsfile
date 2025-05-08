@@ -37,11 +37,10 @@ pipeline {
                         for (port in env.PORTS.split()) {
                             sh """
                             scp -o StrictHostKeyChecking=no -r . ${EC2_USER}@${EC2_HOST}:${EC2_DIR}-${port}
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << EOF
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST}
                                 cd ${EC2_DIR}-${port}
                                 npm install
                                 PORT=${port} pm2 start app.js --name myapp-${port} || pm2 restart myapp-${port}
-EOF
                             """
                         }
                     }
