@@ -44,17 +44,17 @@ pipeline {
                 sshagent(credentials: ["${KEY_CRED_ID}"]) {
                     script {
                         // Deploy to EC2: Use SCP to copy files, then SSH to manage the app
-                        sh """
+                        sh '''
                         echo '🚀 Deploying to EC2 instance...'
                         scp -o StrictHostKeyChecking=no app.js ${EC2_USER}@${EC2_HOST}:${EC2_DIR}
 
                         # SSH into the EC2 instance and use pm2 to manage the app
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'EOF'
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << EOF
                             cd ${EC2_DIR}
                             pm2 restart myapp || pm2 start app.js --name myapp
                             sudo fuser -k 3000/tcp || true  # Kill any process running on port 3000
                         EOF
-                        """
+                        '''
                     }
                 }
             }
