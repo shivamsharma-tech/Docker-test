@@ -1,42 +1,57 @@
 pipeline {
     agent any
 
+    environment {
+        EC2_USER = 'ubuntu'
+        EC2_HOST = 'your-ec2-ip'
+        EC2_DIR = '/home/ubuntu/myapp'
+        SSH_KEY = 'ubuntu' // Your Jenkins SSH credentials ID
+        PORTS = "3000 4000 5000"
+    }
+
+    tools {
+        nodejs 'Node 18' // Match your Jenkins NodeJS setup name
+    }
+
     stages {
-        stage('Build Docker Image') {
+        stage('Clone Repository') {
             steps {
-                script {
-                    // Build the Docker image
-                    dockerImage = docker.build("multi-app")
-                }
+                git branch: 'main', url: 'https://github.com/shivamsharma-tech/your-repo'
             }
         }
 
-        stage('Stop Old Containers') {
+        stage('Install Dependencies') {
             steps {
-                script {
-                    // List of ports you want to deploy on
-                    def ports = [3000, 3001, 3002]
+                sh 'npm install'
+            }
+        }
 
-                    // Loop to remove any running containers on the same ports
-                    for (p in ports) {
-                        sh "docker rm -f app-${p} || true"  // Ignore error if the container is not running
+        stage('Deploy to Multiple Ports') {
+            steps {
+                sshagent (credentials: [env.SSH_KEY]) {
+                    script {
+                        for (port in env.PORTS.split()) {
+                            sh """
+                            scp -o StrictHostKeyChecking=no -r . ${EC2_USER}@${EC2_HOST}:${EC2_DIR}-${port}
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << EOF
+                                cd ${EC2_DIR}-${port}
+                                npm install
+                                PORT=${port} pm2 start app.js --name myapp-${port} || pm2 restart myapp-${port}
+EOF
+                            """
+                        }
                     }
                 }
             }
         }
+    }
 
-        stage('Run on Multiple Ports') {
-            steps {
-                script {
-                    // List of ports you want to deploy on
-                    def ports = [3000, 3001, 3002]
-
-                    // Loop to run containers on the specified ports
-                    for (p in ports) {
-                        sh "docker run -d -p ${p}:3000 --name app-${p} multi-app"
-                    }
-                }
-            }
+    post {
+        success {
+            echo '✅ Deployed to all ports successfully!'
+        }
+        failure {
+            echo '❌ Deployment failed!'
         }
     }
 }
