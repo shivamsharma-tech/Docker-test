@@ -16,7 +16,11 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/shivamsharma-tech/Docker-test'
+                 git(
+            url: 'https://github.com/shivamsharma-tech/Docker-test',
+            branch: 'main',
+            credentialsId: 'shivamsharma' // 👈 Use the same credential ID used in checkout
+        )
             }
         }
 
