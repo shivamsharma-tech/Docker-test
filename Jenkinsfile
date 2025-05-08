@@ -4,7 +4,6 @@ pipeline {
     environment {
         EC2_USER = 'ubuntu'
         EC2_HOST = '51.20.98.107'
-        EC2_KEY = credentials('ubuntu') // Add your SSH private key in Jenkins Credentials
         REMOTE_APP_DIR = '/home/ubuntu/myapp'
     }
 
@@ -25,22 +24,30 @@ pipeline {
                 }
 
                 stages {
-                    stage('Copy & Restart on Port ${PORT}') {
+                    stage('Copy & Restart on Port') {
                         steps {
-                            sh '''
-                                echo "Deploying to port ${PORT} on EC2"
+                            withCredentials([sshUserPrivateKey(credentialsId: 'ubuntu', keyFileVariable: 'SSH_KEY')]) {
+                                sh '''
+                                    echo "Deploying to port $PORT on EC2"
 
-                                # Copy files to EC2
-                                scp -o StrictHostKeyChecking=no -i ${EC2_KEY} -r * ${EC2_USER}@${EC2_HOST}:${REMOTE_APP_DIR}/
+                                    # Prepare minimal deployment package
+                                    mkdir -p deploy_temp
+                                    cp app.js package*.json deploy_temp/
 
-                                # Run remote commands
-                                ssh -o StrictHostKeyChecking=no -i ${EC2_KEY} ${EC2_USER}@${EC2_HOST} <<EOF
-                                    cd ${REMOTE_APP_DIR}
-                                    export PORT=${PORT}
-                                    pm2 delete myapp-${PORT} || true
-                                    pm2 start app.js --name myapp-${PORT} --env PORT=${PORT}
-                                EOF
-                            '''
+                                    # Copy files to EC2
+                                    scp -o StrictHostKeyChecking=no -i $SSH_KEY -r deploy_temp/* $EC2_USER@$EC2_HOST:$REMOTE_APP_DIR/
+
+                                    # Run remote commands
+                                    ssh -o StrictHostKeyChecking=no -i $SSH_KEY $EC2_USER@$EC2_HOST <<EOF
+                                        cd $REMOTE_APP_DIR
+                                        npm install
+                                        pm2 delete myapp-$PORT || true
+                                        PORT=$PORT pm2 start app.js --name myapp-$PORT
+                                    EOF
+
+                                    rm -rf deploy_temp
+                                '''
+                            }
                         }
                     }
                 }
