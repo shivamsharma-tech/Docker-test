@@ -27,7 +27,7 @@ pipeline {
                 stages {
                     stage('Copy & Restart on Port ${PORT}') {
                         steps {
-                            sh """
+                            sh '''
                                 echo "Deploying to port ${PORT} on EC2"
 
                                 # Copy files to EC2
@@ -40,7 +40,7 @@ pipeline {
                                     pm2 delete myapp-${PORT} || true
                                     pm2 start app.js --name myapp-${PORT} --env PORT=${PORT}
                                 EOF
-                            """
+                            '''
                         }
                     }
                 }
