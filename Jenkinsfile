@@ -10,7 +10,7 @@ pipeline {
     }
 
     tools {
-        nodejs 'Node 18' // Match your Jenkins NodeJS setup name
+        nodejs 'node 18' // Match your Jenkins NodeJS setup name
     }
 
     stages {
