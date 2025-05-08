@@ -4,9 +4,8 @@ pipeline {
     environment {
         NODE_ENV = 'production'
         EC2_USER = 'ubuntu' // EC2 username for SSH
-        EC2_HOST = '51.20.98.107' // Your EC2 instance IP address (update this)
-        EC2_DIR = '/home/ubuntu/myapp'
-         SSH_KEY = 'ubuntu' // Directory on EC2 where the app is deployed
+        EC2_HOST = '51.20.98.107' // Your EC2 instance IP address
+        EC2_DIR = '/home/ubuntu/myapp' // Directory on EC2 where the app is deployed
         KEY_CRED_ID = 'ubuntu' // Jenkins SSH credentials ID for private key
     }
 
@@ -50,7 +49,7 @@ pipeline {
                         scp -o StrictHostKeyChecking=no app.js ${EC2_USER}@${EC2_HOST}:${EC2_DIR}
 
                         # SSH into the EC2 instance and use pm2 to manage the app
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << EOF
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'EOF'
                             cd ${EC2_DIR}
                             pm2 restart myapp || pm2 start app.js --name myapp
                             sudo fuser -k 3000/tcp || true  # Kill any process running on port 3000
