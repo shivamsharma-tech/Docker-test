@@ -4,7 +4,7 @@ pipeline {
     environment {
         EC2_USER = 'ubuntu'
         EC2_HOST = '51.20.98.107'  // Replace with your actual EC2 host
-        EC2_KEY = credentials('your-ssh-key-id')  // Ensure SSH key credentials are configured in Jenkins
+        EC2_KEY = credentials('ubuntu')  // Ensure SSH key credentials are configured in Jenkins
     }
 
     stages {
