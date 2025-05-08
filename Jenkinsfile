@@ -32,7 +32,7 @@ pipeline {
 
         stage('Deploy to Multiple Ports') {
             steps {
-                sshagent (credentials: [env.SSH_KEY]) {
+                sshagent (credentials: ["ubuntu"]) {
                     script {
                         for (port in env.PORTS.split()) {
                             sh """
