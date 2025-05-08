@@ -38,12 +38,12 @@ pipeline {
                                     scp -o StrictHostKeyChecking=no -i $SSH_KEY -r deploy_temp/* $EC2_USER@$EC2_HOST:$REMOTE_APP_DIR/
 
                                     # Run remote commands
-                                    ssh -o StrictHostKeyChecking=no -i ${EC2_KEY} ${EC2_USER}@${EC2_HOST} <<EOF
-    cd ${REMOTE_APP_DIR}
-    export PORT=${PORT}
-    pm2 delete myapp-${PORT} || true
-    pm2 start app.js --name myapp-${PORT} --env PORT=${PORT}
-EOF
+                                    ssh -o StrictHostKeyChecking=no -i $SSH_KEY $EC2_USER@$EC2_HOST <<EOF
+                                        cd $REMOTE_APP_DIR
+                                        npm install
+                                        pm2 delete myapp-$PORT || true
+                                        PORT=$PORT pm2 start app.js --name myapp-$PORT
+                                    EOF
 
                                     rm -rf deploy_temp
                                 '''
