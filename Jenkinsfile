@@ -34,24 +34,22 @@ pipeline {
             steps {
                 sshagent(credentials: [env.SSH_KEY]) {
                     script {
-                        for (port in env.PORTS.split()) {
-                            sh """
-                            echo "🚀 Deploying to port ${port}..."
+    for (port in env.PORTS.split()) {
+        echo "🚀 Deploying to port ${port}..."
 
-                            # Copy app to remote EC2 directory
-                            scp -o StrictHostKeyChecking=no -r . ${EC2_USER}@${EC2_HOST}:${EC2_DIR}-${port}
+        sh """
+        rsync -avz --exclude=node_modules --exclude=.git --exclude=*.log -e "ssh -o StrictHostKeyChecking=no" . ${EC2_USER}@${EC2_HOST}:${EC2_DIR}-${port}
+        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+            set -e
+            cd ${EC2_DIR}-${port}
+            npm install
+            PORT=${port} pm2 start app.js --name myapp-${port} || pm2 restart myapp-${port}
+        '
+        """
 
-                            # Connect via SSH and setup the app
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
-                                set -e
-                                cd ${EC2_DIR}-${port}
-                                npm install
-                                PORT=${port} pm2 start app.js --name myapp-${port} || pm2 restart myapp-${port}
-                                echo "✅ Finished deploying to port ${port}"
-                            '
-                            """
-                        }
-                    }
+        echo "✅ Finished deploying to port ${port}"
+    }
+}
                 }
             }
         }
