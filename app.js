@@ -3,7 +3,7 @@ const app = express()
 const port = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-  res.send('I am try to deploy a small project to two port which is 3000 and 8080 so u can check it and give me feeedback and suggestion')
+  res.send('I am try to deploy a small project to two port which is 3000 and 8080 so u can check it and give me feeedback and suggestion !')
 })
 
 app.listen(port, () => {
