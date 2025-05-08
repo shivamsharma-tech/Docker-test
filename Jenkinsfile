@@ -19,7 +19,7 @@ pipeline {
                  git(
             url: 'https://github.com/shivamsharma-tech/Docker-test',
             branch: 'main',
-            credentialsId: 'shivamsharma' // 👈 Use the same credential ID used in checkout
+            credentialsId: 'git-hub' // 👈 Use the same credential ID used in checkout
         )
             }
         }
